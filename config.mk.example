@@ -1,0 +1,29 @@
+# Makefile configuration — copy to config.mk and edit.
+#
+#   cp config.mk.example config.mk
+#
+# config.mk is auto-included by the Makefile (via `-include config.mk`), so these
+# values apply to every `make` invocation without passing them on the command line.
+# Command-line overrides still win, e.g. `make build VERSION=1.2.0`.
+# Keep config.mk out of version control (it holds environment-specific values).
+
+# ---- Container image coordinates (build / push / helm-install) ----
+REGISTRY = registry.example.com/giskard
+VERSION  = 1.0.0
+# IMAGE    = $(REGISTRY)/giskard-measure-ui   # derived from REGISTRY by default
+# PLATFORM = linux/amd64
+# DOCKER   = docker
+
+# ---- Local run (make run) ----
+# PORT             = 8080
+# GISKARD_API_BASE = http://localhost:8000
+
+# ---- Specialization (make specialization / push-spec; also picks helm-install tag) ----
+# SPEC = prod
+
+# ---- Helm deploy (make helm-install / helm-uninstall) ----
+# HELM        = helm
+# RELEASE     = giskard-measure-ui
+# NAMESPACE   = giskard
+# CHART       = chart
+# HELM_VALUES = values.local.yaml

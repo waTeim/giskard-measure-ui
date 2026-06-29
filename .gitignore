@@ -1,0 +1,10 @@
+# Local, environment-specific config — copied from the *.example / *.sample templates.
+config.mk
+values.local.yaml
+.env
+
+# Per-environment specialization configs (spec/example.env is the tracked template).
+spec/*.env
+!spec/example.env
+
+node_modules/

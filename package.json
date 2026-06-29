@@ -1,0 +1,14 @@
+{
+  "name": "giskard-measure-ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Single-page real-time UI for the giskard-measure shadow monitor (static server + read-only API reverse proxy).",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

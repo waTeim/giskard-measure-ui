@@ -1,0 +1,143 @@
+# Default values for giskard-measure-ui.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+# Image built/pushed by the Makefile (`make build` / `make push`):
+#   IMAGE = $(REGISTRY)/giskard-measure-ui, tagged with VERSION (== chart appVersion).
+# For a specialization image (`make specialization SPEC=<name>`) point tag at
+# "<version>-<spec>"; the baked-in env then overrides the `config:` block below.
+image:
+  repository: registry.example.com/giskard/giskard-measure-ui
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created.
+  create: true
+  # Automatically mount a ServiceAccount's API credentials?
+  # The UI server needs no API access; default off.
+  automount: false
+  # Annotations to add to the service account.
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template.
+  name: ""
+
+# Runtime configuration consumed by server.js. These map 1:1 to the env vars the
+# Dockerfile.spec specialization bakes in; exposing them here lets a single base
+# image be promoted into any environment via Helm values instead of a rebuild.
+# Defaults follow env.sample / docker-compose.yml.
+config:
+  # Upstream giskard-measure base URL, reverse-proxied same-origin by server.js.
+  # Defaults to the in-cluster service; override per environment.
+  # If unset/unreachable the proxy returns 502 and the UI runs its simulation fallback.
+  giskardApiBase: "http://giskard-measure:8000"
+  # Upstream request timeout (ms).
+  giskardApiTimeoutMs: 5000
+  # Client poll cadence injected into the page (ms).
+  metricsPollMs: 3000
+  livePollMs: 5000
+  # Optional instance label surfaced on /healthz and to the UI. Empty -> env omitted.
+  instanceLabel: ""
+
+# Port server.js listens on inside the container (its PORT env). The Service,
+# probes and named "http" port all target this.
+containerPort: 8080
+
+podAnnotations: {}
+podLabels: {}
+
+# server.js runs as the unprivileged `node` user (uid 1000) and never writes to disk,
+# so the root filesystem can be read-only.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  # Service port; targetPort is the named container "http" port (containerPort above).
+  port: 80
+
+# Ingress via ingress-nginx, with TLS issued by cert-manager (letsencrypt issuer).
+# Point `host` at your DNS record; cert-manager provisions the secret named in tls.
+ingress:
+  enabled: true
+  className: nginx
+  # cert-manager.io/cluster-issuer triggers automatic certificate issuance/renewal
+  # for the host(s) under tls below. Set to a ClusterIssuer that exists in the cluster.
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+  hosts:
+    - host: giskard-measure-ui.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: giskard-measure-ui-tls
+      hosts:
+        - giskard-measure-ui.example.com
+
+# Small footprint: a zero-dependency static server + reverse proxy.
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 100m
+    memory: 64Mi
+
+# Liveness = process up (/healthz). Readiness = upstream reachable (/readyz) — by
+# design the pod leaves the Service when GISKARD_API_BASE is unreachable.
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+# Additional volumes on the output Deployment definition.
+volumes: []
+  # - name: foo
+  #   secret:
+  #     secretName: mysecret
+  #     optional: false
+
+# Additional volumeMounts on the output Deployment definition.
+volumeMounts: []
+  # - name: foo
+  #   mountPath: "/etc/foo"
+  #   readOnly: true
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

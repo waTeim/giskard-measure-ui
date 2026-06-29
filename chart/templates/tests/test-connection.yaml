@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "giskard-measure-ui.fullname" . }}-test-connection"
+  labels:
+    {{- include "giskard-measure-ui.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  restartPolicy: Never
+  containers:
+    # Liveness: the server is up and serving. /healthz always returns 200 and does
+    # not depend on the upstream, so it is the reliable post-install assertion.
+    # (Readiness /readyz intentionally fails when GISKARD_API_BASE is unreachable.)
+    - name: healthz
+      image: busybox
+      command: ['wget']
+      args:
+        - '--spider'
+        - '-S'
+        - 'http://{{ include "giskard-measure-ui.fullname" . }}:{{ .Values.service.port }}/healthz'
