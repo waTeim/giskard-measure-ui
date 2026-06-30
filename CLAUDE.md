@@ -75,13 +75,50 @@ Two pieces, one contract:
    exported build; the server and container contract stay unchanged. The UI reads the injected
    `window.__GISKARD_*` globals, polls the same-origin proxied endpoints, and binds the
    **status bar** + **coverage panel** to live `/metrics` (via `state.liveMetrics`). The
-   band-channel hero and ticker still animate from a **local Ornstein-Uhlenbeck simulation**
-   (`seedMids`/`tick`/`select` → `state.mids`, `Math.random`-driven), so switching product
-   re-rolls a new random path each time. `pullLive()` *does* fetch `/live/{product}` into
-   `state.liveSeries`, but that state is **write-only — nothing reads it**. Binding the hero
-   to that live data is the outstanding data-integration step, and **belongs in the upstream
-   UI source** (this `index.html` is a prebuilt artifact); it needs the real `/live/{product}`
-   schema (the UI doesn't yet reference the README's `recent_mids`/`bands`/`resolved`).
+   hero is a **time-based backtest** of the model bound to `/live/{product}` (schema + API
+   verified live in cluster ns `jeffw`). NOW is the right edge; there is **no forward
+   projection**.
+   - **`backtestHero(...)`** owns the live geometry; `renderVals` calls it whenever
+     `liveDataFor(sel)` returns data, else falls back to the old index-based **simulation**
+     geometry (offline/preview). Both return the same shapes the template consumes.
+   - **realized line** = `recent_mids` (`[{t,mid}]`, 1s spacing) over the last `max_offset`
+     (600s), mapped by **time** `X(t)` — not array index.
+   - **predicted bands lag by their real offset** — each `resolved` entry
+     (`{offset_s,t_pred,t_resolve,origin,low,high,realized,cover}`) is drawn at `x=t_resolve`
+     as `[origin·(1+low), origin·(1+high)]`; same-offset points form a lagging ribbon. Escapes
+     (`cover:false`) render as rings at the realized point.
+   - **y-scale** = realized mids + all in-window band bounds, padded 6% (the model-derived,
+     "retrievable" scale).
+   - **data layer** — per the contract in **`docs/live-api-contract.md`**: `pullLive(p)`
+     **prefills** with a full `GET /live/{product}` (no `since`) then each poll fetches
+     `?since=<cursor>` and **merges** (dedup-append new `recent_mids` by `t` and `resolved` by
+     `(offset_s,t_pred)`, refresh `bands`/`origin_mid`/`server_time`, evict anything older than
+     `max_offset`). The cursor is the **max `t_resolve` seen** (the resolved watermark), *not*
+     `server_time`: resolved legs lag `server_time` by the resolution delay (~10–24s), so
+     cursoring on `server_time` skips them — the classic "price updates but bands just shift
+     left" bug. Cursoring on the watermark re-pulls a small mid tail each poll (deduped) and
+     catches every new leg. Stored per product in `this.lcache[p]`. `initLive` polls all
+     `PRODUCTS` each `live_ms` (incremental deltas are tiny — ~1 mid-batch + ~6 legs), keeping
+     switches instant. This relies on the API's per-leg emission + `t_resolve`-keyed `since`
+     (both now implemented); with those, every offset's ribbon reaches ≈now and short horizons
+     are denser than long (≈`window/stride` per offset).
+   - **fallbacks / follow-ups** — sim runs when `/live` is absent/stale. Hover tooltip is
+     disabled in backtest mode (`onChartMove` early-returns when live) — reimplementing it on
+     the time axis is a known follow-up. The `covFor` coverage *fallback* still uses symmetric
+     `WIDTHS` (only matters if `/metrics` is down).
+
+   The older index-based ribbon was miscalibrated (assumed a 10s mid step; real is 1s) and
+   couldn't lag horizons to 600s with only 120s of history. That required the API changes in
+   **`docs/live-backtest-api-spec.md`** (now implemented). All bundle edits were validated by
+   JSON-decoding the `__bundler/template` block, parsing the app script, and checking the
+   geometry math against live payloads — **not** browser-verified.
+
+   **Editing the bundle**: `public/index.html` is a custom-bundler artifact, not plain HTML.
+   The whole app lives JSON-encoded inside the `<script type="__bundler/template">` block, so
+   any edit to app code must preserve JSON-string escaping (e.g. newlines as `\n`, not raw).
+   Validate after editing by JSON-parsing that block, extracting the inner `<script>` with the
+   app code, and syntax-checking it (`new vm.Script(...)`); confirm the file still has exactly
+   4 `</script>` tags.
 
 ## Configuration & images
 

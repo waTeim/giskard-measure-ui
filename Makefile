@@ -84,7 +84,7 @@ helm-install: ## Deploy to Kubernetes from a local values file ($(HELM_VALUES))
 	  --set image.repository=$(IMAGE) \
 	  --set image.tag=$(DEPLOY_TAG) \
 	  -f $(HELM_VALUES)
-	@echo "deployed $(RELEASE) -> $(IMAGE):$(DEPLOY_TAG) (namespace: $(NAMESPACE))"
+	@echo "deployed $(RELEASE) -> $(IMAGE):$(DEPLOY_TAG)"
 
 helm-uninstall: ## Remove the Helm release
 	$(HELM) uninstall $(RELEASE) --namespace $(NAMESPACE)

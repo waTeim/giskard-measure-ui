@@ -8,6 +8,9 @@
 # (REGISTRY / VERSION, or VERSION-SPEC) at install time, so they are omitted here.
 # Keep values.local.yaml out of version control.
 
+image:
+  pullPolicy: Always
+
 # Runtime config — the specialization knobs from Dockerfile.spec, exposed as values.
 config:
   # Upstream giskard-measure API this instance reverse-proxies (in-cluster service URL).
