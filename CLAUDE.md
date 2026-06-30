@@ -85,8 +85,17 @@ Two pieces, one contract:
      (600s), mapped by **time** `X(t)` — not array index.
    - **predicted bands lag by their real offset** — each `resolved` entry
      (`{offset_s,t_pred,t_resolve,origin,low,high,realized,cover}`) is drawn at `x=t_resolve`
-     as `[origin·(1+low), origin·(1+high)]`; same-offset points form a lagging ribbon. Escapes
-     (`cover:false`) render as rings at the realized point.
+     as `[origin·(1+low), origin·(1+high)]`; same-offset points form a lagging ribbon.
+   - **grid sync** — legs from different offsets resolve at independent, jittered times
+     (~5–8s apart), so `backtestHero` snaps each leg's `t_resolve` to a common `stride`-second
+     grid (anchored at NOW, keeping the leg nearest each bucket). Without this the per-offset
+     bands drift a few px apart and escapes don't align. Escapes (`cover:false`) are grouped
+     per bucket → **concentric rings** (one per escaped horizon, increasing radius) at the
+     shared realized point — matching the original sim's behavior.
+   - **edge alignment** — each ribbon is flat-extended to a common `[leftT, rightT]` = the
+     realized line's span (`wm[0].t … wm[last].t`), so all bands start/end at the same x (no
+     ragged edges) and the newest band reaches the current price at the RHS (otherwise the
+     newest leg sits ~1 stride short of the latest mid).
    - **y-scale** = realized mids + all in-window band bounds, padded 6% (the model-derived,
      "retrievable" scale).
    - **data layer** — per the contract in **`docs/live-api-contract.md`**: `pullLive(p)`
