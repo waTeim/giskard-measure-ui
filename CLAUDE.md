@@ -111,10 +111,12 @@ Two pieces, one contract:
      switches instant. This relies on the API's per-leg emission + `t_resolve`-keyed `since`
      (both now implemented); with those, every offset's ribbon reaches ≈now and short horizons
      are denser than long (≈`window/stride` per offset).
-   - **fallbacks / follow-ups** — sim runs when `/live` is absent/stale. Hover tooltip is
-     disabled in backtest mode (`onChartMove` early-returns when live) — reimplementing it on
-     the time axis is a known follow-up. The `covFor` coverage *fallback* still uses symmetric
-     `WIDTHS` (only matters if `/metrics` is down).
+   - **hover** — `onChartMove` records the cursor x-fraction (`hv.frac`); `backtestHero` maps
+     it to a time, finds the nearest mid (crosshair + price) and, per offset, the nearest leg
+     (fanned band-hint lines + IN/OUT rows + relative time) — the time-axis equivalent of the
+     old index-based tooltip.
+   - **fallbacks** — sim runs when `/live` is absent/stale. The `covFor` coverage *fallback*
+     still uses symmetric `WIDTHS` (only matters if `/metrics` is down).
 
    The older index-based ribbon was miscalibrated (assumed a 10s mid step; real is 1s) and
    couldn't lag horizons to 600s with only 120s of history. That required the API changes in
